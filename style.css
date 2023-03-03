@@ -1,0 +1,5 @@
+.gradio-container {
+    background: linear-gradient(135deg, #12801d 10%, #4a72f5 100%);
+    padding: 20px;
+    color: #fff;
+}
