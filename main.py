@@ -2,7 +2,7 @@ import gradio as gr
 import openai
 
 import config
-from custom_functions import transcribe, api_transcribe
+from third_patry_libs.custom_functions import transcribe, api_transcribe
 
 openai.api_key = config.API_KEY
 

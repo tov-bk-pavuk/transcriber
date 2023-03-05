@@ -3,8 +3,6 @@ import numpy as np
 import math
 from pydub import AudioSegment
 import openai
-from time import sleep
-import pprint as p
 
 import config
 
@@ -96,6 +94,7 @@ def split_audio_into_segments(audio: AudioSegment, segment_duration_ms: int) -> 
     for i in range(0, len(audio), segment_duration_ms):
         segment = audio[i: i + segment_duration_ms]
         segments.append(segment)
+    print("split_audio_into_segments is done")
     return segments
 
 
@@ -108,8 +107,9 @@ def calculate_segment_duration(mp3_filepath: str, segment_size_mb: int) -> tuple
     return audio, segment_duration_ms
 
 
-if __name__ == "__main__":
-    filepath = "/home/master/Загрузки/segment_03.03.23-19:27:32.136620.mp3"
-    # filepath = "/home/master/Загрузки/segment_03.03.23-19:27:25.248100.mp3"
-    # filepath = "/home/master/Загрузки/segment_03.03.23-19:27:19.229522.mp3"
-    api_transcribe_to_txt_file(filepath)
+def get_chat_gpt_completion(text, prompt):
+    prompt[2].update({"content": text})
+    return openai.ChatCompletion.create(
+        model="gpt-3.5-turbo",
+        messages=prompt
+    )["choices"][0]["message"]["content"]
