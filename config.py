@@ -20,15 +20,17 @@ GPT_SUMMARY_PROMPT_RU = [
 ]
 
 GPT_TRANSLATE_PROMPT_UA = [
-    {"role": "system", "content": "Ви український лінгвіст перекладач"},
-    {"role": "user", "content": "Перекладіть наступний текст українською мовою"},
+    {"role": "system", "content": "You are a professional multilanguage translator. Ukrainian native speaker."},
+    {"role": "user", "content": "Please translate the text below into Ukrainian language."},
     {"role": "user", "content": ""},
 ]
 
 GPT_TRANSLATE_PROMPT_EN = [
-    {"role": "system", "content": "You are a professional translator, English native speaker"},
-    {"role": "user", "content": "Translate the text below into English"},
+    {"role": "system", "content": "You are a professional translator, English native speaker."},
+    {"role": "user", "content": "Please translate the text below into English language."},
     {"role": "user", "content": ""},
 ]
 
-SLEEP_SECS = 10
+SLEEP_SECS = 3
+
+FILE_FOLDER = "/home/master/Загрузки/transcribe_and_translate"

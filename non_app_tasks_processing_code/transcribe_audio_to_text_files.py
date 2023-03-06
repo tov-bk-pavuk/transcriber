@@ -4,17 +4,24 @@ import tempfile
 from time import sleep
 
 import config
+from integrations.open_ai import (
+    audio_transcribe,
+    get_chat_gpt_completion,
+)
+
 from third_patry_libs.custom_functions import (
     calculate_segment_duration,
-    get_chat_gpt_completion,
-    split_audio_into_segments
-
+    get_file_lists,
+    gpt_slice_text_into_pieces,
+    split_audio_into_segments,
 )
 
 openai.api_key = config.API_KEY
+mp3_file_name_list, txt_files_file_name_list = get_file_lists()
+print(f"{mp3_file_name_list=},{txt_files_file_name_list=}")
 
 
-def divide_and_transcribe(mp3_filepath: str, segment_size_mb=10):
+def divide_and_transcribe(mp3_filepath: str, result_filename: str, segment_size_mb=10):
     date_stamp = datetime.now().strftime("%d.%m.%y-%H:%M:%S")
     audio, segment_duration_ms = calculate_segment_duration(mp3_filepath, segment_size_mb)
     segments = split_audio_into_segments(audio, segment_duration_ms)
@@ -25,35 +32,57 @@ def divide_and_transcribe(mp3_filepath: str, segment_size_mb=10):
             print(f"segment_{number} exported to temporary file")
             with open(temp_file_container.name, "rb") as temp_file_obj:
                 temp_file_obj.seek(0)
-                transcript = openai.Audio.transcribe(
-                    model="whisper-1",
-                    file=temp_file_obj,
-                    language="ru",
-                )
-                # sleep(config.SLEEP_SECS)
+                transcript = audio_transcribe(temp_file_obj, "ru")
+                print(f"{audio_transcribe.count=}")
+                sleep(config.SLEEP_SECS)
                 print(f"segment_{number} transcribed ")
-                # with open(f"/home/master/Загрузки/transcribed_text_ru{date_stamp}.txt", "a") as fil_obj:
-                #     print(f"{transcript['text']=}")
-                #     fil_obj.write(transcript["text"] + "\n\n")
-                # with open(f"/home/master/Загрузки/transcribed_text_ua{date_stamp}.txt", "a") as fil_obj:
-                #     translated_text_ua = get_chat_gpt_completion(transcript['text'], config.GPT_TRANSLATE_PROMPT_UA)
-                #     sleep(config.SLEEP_SECS)
-                #     print(f"{translated_text_ua=}")
-                #     fil_obj.write(translated_text_ua + "\n\n")
-                # with open(f"/home/master/Загрузки/transcribed_text_en{date_stamp}.txt", "a") as fil_obj:
-                #     translated_text_en = get_chat_gpt_completion(transcript['text'], config.GPT_TRANSLATE_PROMPT_EN)
-                #     sleep(config.SLEEP_SECS)
-                #     print(f"{translated_text_en=}")
-                #     fil_obj.write(translated_text_en + "\n\n")
-                with open(f"/home/master/Загрузки/summarized_text_ru{date_stamp}.txt", "a") as fil_obj:
-                    summarized_text = get_chat_gpt_completion(transcript['text'], config.GPT_SUMMARY_PROMPT_RU)
-                    sleep(config.SLEEP_SECS)
-                    print(f"{summarized_text=}")
-                    fil_obj.write(summarized_text + "\n\n")
+                with open(f"{config.FILE_FOLDER}/transcribed_{result_filename}_ru{date_stamp}.txt", "a") as fil_obj:
+                    print(f"{transcript['text']=}")
+                    fil_obj.write(transcript["text"] + "\n\n")
+
+                    # CODE TO TRANSLATE ON FLYING
+                    # with open(f"/home/master/Загрузки/transcribed_text_ua{date_stamp}.txt", "a") as fil_obj:
+                    #     translated_text_ua = get_chat_gpt_completion(transcript['text'], config.GPT_TRANSLATE_PROMPT_UA)
+                    #     sleep(config.SLEEP_SECS)
+                    #     print(f"{translated_text_ua=}")
+                    #     fil_obj.write(translated_text_ua + "\n\n")
+                    # with open(f"/home/master/Загрузки/transcribed_text_en{date_stamp}.txt", "a") as fil_obj:
+                    #     translated_text_en = get_chat_gpt_completion(transcript['text'], config.GPT_TRANSLATE_PROMPT_EN)
+                    #     sleep(config.SLEEP_SECS)
+                    #     print(f"{translated_text_en=}")
+                    #     fil_obj.write(translated_text_en + "\n\n")
+                    # with open(f"/home/master/Загрузки/summarized_text_ru{date_stamp}.txt", "a") as fil_obj:
+                    #     summarized_text = get_chat_gpt_completion(transcript['text'], config.GPT_SUMMARY_PROMPT_RU)
+                    #     print(f"{get_chat_gpt_completion.count=}")
+                    # sleep(config.SLEEP_SECS)
+                    # print(f"{summarized_text=}")
+                    # fil_obj.write(summarized_text + "\n\n")
         print("Success!")
 
 
+def translate_txt_to_ua_en(txt_filenames_list: list):
+    for text_file_name in txt_filenames_list:
+        with open(f"{config.FILE_FOLDER}/{text_file_name}", "r") as file_obj:
+            source_text = file_obj.read()
+            text_pieces: list = gpt_slice_text_into_pieces(source_text, 4000)
+        with open(f"{config.FILE_FOLDER}/ua_{text_file_name}", "a") as file_obj_:
+            for text in text_pieces:
+                res = get_chat_gpt_completion(text, config.GPT_TRANSLATE_PROMPT_UA)
+                print(f"{get_chat_gpt_completion.count=}")
+                print(f"{res=}")
+                file_obj_.write(res)
+        with open(f"{config.FILE_FOLDER}/en_{text_file_name}", "a") as file_obj_:
+            for text in text_pieces:
+                res = get_chat_gpt_completion(text, config.GPT_TRANSLATE_PROMPT_EN)
+                print(f"{get_chat_gpt_completion.count=}")
+                print(f"{res=}")
+                file_obj_.write(res)
+
+
 if __name__ == "__main__":
-    file_name = "segment_2.mp3"
-    file_path = f"/home/master/Загрузки/{file_name}"
-    divide_and_transcribe(file_path, 4)
+    # TRANSCRIBE LIST OF AUDIO FILES INTO TEXT.TXT FILE IN RUSSIAN
+    # for audio_file_filename in mp3_file_name_list:
+    #     divide_and_transcribe(f"{config.FILE_FOLDER}/{audio_file_filename}", audio_file_filename, 15)
+
+    # TRANSLATE LIST OF TEXT FILES INTO UKRAINIAN AND ENGLISH
+    translate_txt_to_ua_en(txt_files_file_name_list)
