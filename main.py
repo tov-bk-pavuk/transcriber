@@ -1,10 +1,18 @@
 import gradio as gr
 import openai
 
+from third_patry_libs.custom_functions import (
+    api_transcribe,
+    translated_file_output,
+    transcribe,
+)
 import config
-from third_patry_libs.custom_functions import transcribe, api_transcribe
 
 openai.api_key = config.API_KEY
+
+
+def translate_text(text):
+    return translated_file_output(text)  # todo add second func with UA_PROMPT
 
 
 def main_processing_func(audio, file):
@@ -12,10 +20,8 @@ def main_processing_func(audio, file):
 
 
 if __name__ == "__main__":
-
     # with gr.Blocks(css=".gradio-container {background-color: red}}") as transcribe_interface:
     with gr.Blocks(css="style.css") as transcribe_interface:
-
         with gr.Row():
             # with gr.Column():
             #     gr.Image("/home/master/Загрузки/63cc28a3459f07267c940575_map_6_elevation (2).jpg")
@@ -25,13 +31,20 @@ if __name__ == "__main__":
                 audio_input = gr.Audio(label="push to record here", source="microphone", type="filepath")
                 file_input = gr.File(label="Download file")
                 btn_submit = gr.Button(value="Transcribe")
+                btn_translate = gr.Button(value="Translate")
             with gr.Column():
                 text_output_record = gr.Textbox(label="Transcribed record")
                 text_output_audio_file = gr.Textbox(label="Transcribed audio_file")
+                output_txt_file = gr.components.File(label="Загрузить файл")  # todo add ukrainian file
         btn_submit.click(
-                fn=main_processing_func,
-                inputs=[audio_input, file_input],
-                outputs=[text_output_record, text_output_audio_file],
+            fn=main_processing_func,
+            inputs=[audio_input, file_input],
+            outputs=[text_output_record, text_output_audio_file],
+        )
+        btn_translate.click(
+            fn=translate_text,
+            inputs=[text_output_audio_file],
+            outputs=[output_txt_file],
         )
 
     transcribe_interface.launch()

@@ -7,11 +7,12 @@ from pydub import AudioSegment
 import openai
 
 import config
+from integrations.open_ai import get_chat_gpt_completion
 
 openai.api_key = config.API_KEY
 
 
-def transcribe(audio):
+def transcribe(audio):  # todo add audio slicing
     if audio:
         with open(audio, "rb") as audio_file:
             transcript = openai.Audio.transcribe("whisper-1", audio_file)
@@ -19,13 +20,22 @@ def transcribe(audio):
     return "No audio"
 
 
-def api_transcribe(temp_file_obj):
+def api_transcribe(temp_file_obj):  # todo add audio slicing
     if temp_file_obj:
         file_path = temp_file_obj.name
         with open(file_path, "rb") as audio_file:
             transcript = openai.Audio.transcribe("whisper-1", audio_file)
             return transcript["text"]
     return "No file"
+
+
+def translated_file_output(text):  # todo add text slicing
+    if text:
+        with open(f"{config.FILE_FOLDER}/1.txt", "w") as fil_obj:
+            # todo make prompt as agr
+            translated_text = get_chat_gpt_completion(text, config.GPT_TRANSLATE_PROMPT_EN)
+            fil_obj.write(translated_text)
+        return f"{config.FILE_FOLDER}/1.txt"
 
 
 def api_transcribe_to_txt_file(file_path):
