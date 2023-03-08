@@ -8,7 +8,7 @@ openai.api_key = config.API_KEY
 
 
 @call_counter
-def audio_transcribe(file: typing.BinaryIO, language: typing.Union["ru", "uk", "en"]):
+def audio_transcribe(file: typing.BinaryIO, language: typing.Union["ru", "uk", "en"] = None):
     return openai.Audio.transcribe(
         model="whisper-1",
         file=file,

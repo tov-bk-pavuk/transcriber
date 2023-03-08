@@ -40,7 +40,7 @@ def divide_and_transcribe(mp3_filepath: str, result_filename: str, segment_size_
                     print(f"{transcript['text']=}")
                     fil_obj.write(transcript["text"] + "\n\n")
 
-                    # CODE TO TRANSLATE ON FLYING
+                    # CODE TO TRANSLATE TEXT FROM AUDIO ON THE FLY
                     # with open(f"/home/master/Загрузки/transcribed_text_ua{date_stamp}.txt", "a") as fil_obj:
                     #     translated_text_ua = get_chat_gpt_completion(transcript['text'], config.GPT_TRANSLATE_PROMPT_UA)
                     #     sleep(config.SLEEP_SECS)
@@ -62,8 +62,14 @@ def divide_and_transcribe(mp3_filepath: str, result_filename: str, segment_size_
 
 def translate_txt_to_ua_en(txt_filenames_list: list):
     for text_file_name in txt_filenames_list:
-        with open(f"{config.FILE_FOLDER}/{text_file_name}", "r") as file_obj:
-            source_text = file_obj.read()
+        try:
+            with open(f"{config.FILE_FOLDER}/{text_file_name}", "r") as file_obj:
+                source_text = file_obj.read()
+        except UnicodeDecodeError as ex:  # if text not in UTF-8
+            print(f"{ex=}")
+            with open(f"{config.FILE_FOLDER}/{text_file_name}", "rb") as file_obj:
+                source_text = file_obj.read().decode('Windows-1251')
+        finally:
             text_pieces: list = gpt_slice_text_into_pieces(source_text, 4000)
         with open(f"{config.FILE_FOLDER}/ua_{text_file_name}", "a") as file_obj_:
             for text in text_pieces:

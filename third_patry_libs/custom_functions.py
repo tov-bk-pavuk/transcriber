@@ -2,40 +2,56 @@ from collections import namedtuple
 from datetime import datetime
 import math
 import numpy as np
+import openai
 from os import listdir
 from pydub import AudioSegment
-import openai
+from tempfile import NamedTemporaryFile
 
 import config
-from integrations.open_ai import get_chat_gpt_completion
+from integrations.open_ai import (
+    audio_transcribe,
+    get_chat_gpt_completion,
+)
 
 openai.api_key = config.API_KEY
 
 
-def transcribe(audio):  # todo add audio slicing
-    if audio:
+def record_transcribe_to_text(audio):  # todo add audio slicing
+    if audio:  # todo add record size restriction to 25 Mb
         with open(audio, "rb") as audio_file:
-            transcript = openai.Audio.transcribe("whisper-1", audio_file)
+            transcript = audio_transcribe(audio_file)
             return transcript["text"]
     return "No audio"
 
 
-def api_transcribe(temp_file_obj):  # todo add audio slicing
-    if temp_file_obj:
+def audio_transcribe_to_text(temp_file_obj):  # todo add audio slicing
+    if temp_file_obj:  # todo add record size restriction to 25 Mb
         file_path = temp_file_obj.name
         with open(file_path, "rb") as audio_file:
-            transcript = openai.Audio.transcribe("whisper-1", audio_file)
+            transcript = audio_transcribe(audio_file)
             return transcript["text"]
     return "No file"
 
 
 def translated_file_output(text):  # todo add text slicing
-    if text:
+    if text and text != "No file":
         with open(f"{config.FILE_FOLDER}/1.txt", "w") as fil_obj:
-            # todo make prompt as agr
             translated_text = get_chat_gpt_completion(text, config.GPT_TRANSLATE_PROMPT_EN)
             fil_obj.write(translated_text)
         return f"{config.FILE_FOLDER}/1.txt"
+
+
+def translated_temp_file_output(temp_file_obj):
+    if temp_file_obj:
+        with open(temp_file_obj.name, "r") as file_obj:
+            text = file_obj.read()
+            text_pieces = gpt_slice_text_into_pieces(text, 4000)
+        with NamedTemporaryFile(
+                suffix=".txt", mode="a", delete=False, dir="flagged/file") as temp_file_container:
+            for text_piece in text_pieces:
+                translated_text = get_chat_gpt_completion(text_piece, config.GPT_TRANSLATE_PROMPT_EN)
+                temp_file_container.write(translated_text)
+        return temp_file_container.name  # todo investigate mime types to return
 
 
 def api_transcribe_to_txt_file(file_path):
