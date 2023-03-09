@@ -17,7 +17,11 @@ def audio_transcribe(file: typing.BinaryIO, language: typing.Union["ru", "uk", "
 
 
 @call_counter
-def get_chat_gpt_completion(text: str, prompt):
+def get_chat_gpt_completion(text: str, prompt: dict, lang_prompt: str = "English"):
+    system_prompt = f"You are a professional translator. {lang_prompt} native speaker."
+    user_prompt = f"Translate the text below into {lang_prompt}."
+    prompt[0].update({"content": system_prompt})
+    prompt[1].update({"content": user_prompt})
     prompt[2].update({"content": text})
     return openai.ChatCompletion.create(
         model="gpt-3.5-turbo",

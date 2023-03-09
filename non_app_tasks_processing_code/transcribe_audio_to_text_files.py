@@ -41,22 +41,23 @@ def divide_and_transcribe(mp3_filepath: str, result_filename: str, segment_size_
                     fil_obj.write(transcript["text"] + "\n\n")
 
                     # CODE TO TRANSLATE TEXT FROM AUDIO ON THE FLY
-                    # with open(f"/home/master/Загрузки/transcribed_text_ua{date_stamp}.txt", "a") as fil_obj:
-                    #     translated_text_ua = get_chat_gpt_completion(transcript['text'], config.GPT_TRANSLATE_PROMPT_UA)
+                    # with open(f"/home/master/Загрузки/transcribed_text_ua{date_stamp}.txt", "a") as fil_obj_:
+                    #     translated_text_ua = get_chat_gpt_completion(transcript['text'],
+                    #                                                  config.GPT_TRANSLATE_PROMPT_UA, "Ukrainian")
                     #     sleep(config.SLEEP_SECS)
                     #     print(f"{translated_text_ua=}")
-                    #     fil_obj.write(translated_text_ua + "\n\n")
-                    # with open(f"/home/master/Загрузки/transcribed_text_en{date_stamp}.txt", "a") as fil_obj:
+                    #     fil_obj_.write(translated_text_ua + "\n\n")
+                    # with open(f"/home/master/Загрузки/transcribed_text_en{date_stamp}.txt", "a") as fil_obj_:
                     #     translated_text_en = get_chat_gpt_completion(transcript['text'], config.GPT_TRANSLATE_PROMPT_EN)
                     #     sleep(config.SLEEP_SECS)
                     #     print(f"{translated_text_en=}")
-                    #     fil_obj.write(translated_text_en + "\n\n")
-                    # with open(f"/home/master/Загрузки/summarized_text_ru{date_stamp}.txt", "a") as fil_obj:
-                    #     summarized_text = get_chat_gpt_completion(transcript['text'], config.GPT_SUMMARY_PROMPT_RU)
+                    #     fil_obj_.write(translated_text_en + "\n\n")
+                    # with open(f"/home/master/Загрузки/summarized_text_ru{date_stamp}.txt", "a") as fil_obj_:
+                    #     summarized_text = get_chat_gpt_completion(transcript['text'], config.GPT_SUMMARY_PROMPT_RU, "Russian")
                     #     print(f"{get_chat_gpt_completion.count=}")
-                    # sleep(config.SLEEP_SECS)
-                    # print(f"{summarized_text=}")
-                    # fil_obj.write(summarized_text + "\n\n")
+                    #     sleep(config.SLEEP_SECS)
+                    #     print(f"{summarized_text=}")
+                    #     fil_obj_.write(summarized_text + "\n\n")
         print("Success!")
 
 
@@ -73,7 +74,7 @@ def translate_txt_to_ua_en(txt_filenames_list: list):
             text_pieces: list = gpt_slice_text_into_pieces(source_text, 4000)
         with open(f"{config.FILE_FOLDER}/ua_{text_file_name}", "a") as file_obj_:
             for text in text_pieces:
-                res = get_chat_gpt_completion(text, config.GPT_TRANSLATE_PROMPT_UA)
+                res = get_chat_gpt_completion(text, config.GPT_TRANSLATE_PROMPT_UA, "Ukrainian")
                 print(f"{get_chat_gpt_completion.count=}")
                 print(f"{res=}")
                 file_obj_.write(res)
