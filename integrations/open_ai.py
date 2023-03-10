@@ -2,7 +2,7 @@ import typing
 import openai
 
 import config
-from third_patry_libs.code_tools import call_counter
+from third_patry_libs.debug_tools import call_counter
 
 openai.api_key = config.API_KEY
 
