@@ -42,13 +42,14 @@ def translated_file_output(text):  # todo add text slicing
 
 
 def make_txt_translated_file_from_pieces(text_pieces: list, lang: str = "English") -> str:
-    with NamedTemporaryFile(
-            suffix=".txt", mode="a", delete=False, dir="flagged/file") as temp_file_container:
-        for text_piece in text_pieces:
-            print(text_piece)
-            translated_text = get_chat_gpt_completion(text_piece, config.GPT_TRANSLATE_PROMPT_EN, lang)
-            temp_file_container.write(translated_text)
-    return temp_file_container.name  # todo investigate mime types to return
+    if text_pieces:
+        with NamedTemporaryFile(
+                suffix=".txt", mode="a", delete=False, dir="flagged/file") as temp_file_container:
+            for text_piece in text_pieces:
+                print(text_piece)
+                translated_text = get_chat_gpt_completion(text_piece, config.GPT_TRANSLATE_PROMPT_EN, lang)
+                temp_file_container.write(translated_text)
+        return temp_file_container.name  # todo investigate mime types to return
 
 
 def translated_temp_file_output(temp_file_obj, lang: str = "English"):
@@ -60,8 +61,9 @@ def translated_temp_file_output(temp_file_obj, lang: str = "English"):
 
 
 def make_txt_translated_file(text, lang: str = "English"):
-    text_pieces = gpt_slice_text_into_pieces(text, config.CHARACTERS_AMOUNT)
-    return make_txt_translated_file_from_pieces(text_pieces, lang)
+    if text:
+        text_pieces = gpt_slice_text_into_pieces(text, config.CHARACTERS_AMOUNT)
+        return make_txt_translated_file_from_pieces(text_pieces, lang)
 
 
 def api_transcribe_to_txt_file(file_path):
@@ -73,7 +75,7 @@ def api_transcribe_to_txt_file(file_path):
         print("Success!")
 
 
-def convert_mp3_file():
+def convert_mp3_file_to_int_16():
     # read MP3 file
     audio_data = AudioSegment.from_file("input_audio.mp3", format="mp3")
     # get sample rate and channels

@@ -4,6 +4,10 @@ from dotenv import load_dotenv
 load_dotenv()
 
 API_KEY = os.getenv("OPENAI_API_KEY", "")
+USERS = [
+    (os.getenv("pm_username", ""), os.getenv("pm_password", "")),
+    (os.getenv("guest_username", ""), os.getenv("guest_password", "")),
+]
 
 GPT_SUMMARY_PROMPT_EN = [
     {"role": "system", "content": "You are a summarization expert who makes takeaways from daily meetings."},
@@ -45,3 +49,9 @@ LANGUAGES = ["English", "Ukrainian", "Russian"]
 
 # need to divide text into parts because of 4096 tokens restriction
 CHARACTERS_AMOUNT = 4000
+
+SOME_TEXT = "In the example above, the file argument is a Gradio gr.File()"
+" object passed to the process_file() function. Inside the function,"
+" we access the temporary filepath of the uploaded file by calling file.file.name."
+" This returns a string containing the path to the temporary file,"
+" which can then be used for further processing."
