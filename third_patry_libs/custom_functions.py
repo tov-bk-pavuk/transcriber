@@ -1,83 +1,90 @@
 from collections import namedtuple
 from datetime import datetime
 import math
+from os import listdir, fstat
+from tempfile import NamedTemporaryFile
+
 import numpy as np
 import openai
-from os import listdir
 from pydub import AudioSegment
-from tempfile import NamedTemporaryFile
 
 import config
 from integrations.open_ai import (
     audio_transcribe,
     get_chat_gpt_completion,
 )
+from third_patry_libs.custom_exceptions import FileSizeException
+from third_patry_libs.debug_tools import measure_time
 
 openai.api_key = config.API_KEY
 
 
-def record_transcribe_to_text(audio):  # todo add audio slicing
-    if audio:  # todo add record size restriction to 25 Mb
+def record_transcribe_to_text(audio):
+    if audio:
         with open(audio, "rb") as audio_file:
+            file_size = fstat(audio_file.fileno()).st_size
+            if file_size > config.BYTES_25:
+                raise FileSizeException(f"Record size is {file_size / config.FILE_DIVIDER} Mb."
+                                        f"Allowed record size is {config.BYTES_25 / config.FILE_DIVIDER} Mb!")
             transcript = audio_transcribe(audio_file)
             return transcript["text"]
     return "No audio"
 
 
-def audio_transcribe_to_text(temp_file_obj):  # todo add audio slicing
-    if temp_file_obj:  # todo add record size restriction to 25 Mb
+def audio_transcribe_to_text(temp_file_obj):
+    if temp_file_obj:
         file_path = temp_file_obj.name
         with open(file_path, "rb") as audio_file:
-            transcript = audio_transcribe(audio_file)
-            return transcript["text"]
+            file_size = fstat(audio_file.fileno()).st_size
+            if file_size > config.FILE_SIZE_RESTRICTION_BYTES:
+                raise FileSizeException(f"Reduce audio file size to"
+                                        f" {config.FILE_SIZE_RESTRICTION_BYTES / config.FILE_DIVIDER} Mb!")
+            elif file_size > config.BYTES_25:
+                audio, segment_duration = calculate_segment_duration(
+                    file_path, config.API_AUDIOFILE_SIZE_RESTRICTION_MB)
+                segments = split_audio_into_segments(audio, segment_duration)
+                transcribed_text = ""
+                for segment in segments:
+                    transcript = audio_transcribe(segment)
+                    transcribed_text.join(transcript["text"])
+                return transcribed_text
+            else:
+                transcript = audio_transcribe(audio_file)
+                return transcript["text"]
     return "No file"
 
 
-def translated_file_output(text):  # todo add text slicing
-    if text and text != "No file":
-        with open(f"{config.FILE_FOLDER}/1.txt", "w") as fil_obj:
-            translated_text = get_chat_gpt_completion(text, config.GPT_TRANSLATE_PROMPT_EN)
-            fil_obj.write(translated_text)
-        return f"{config.FILE_FOLDER}/1.txt"
-
-
-def make_txt_translated_file_from_pieces(text_pieces: list, lang: str = "English") -> str:
-    if text_pieces:
-        with NamedTemporaryFile(
-                suffix=".txt", mode="a", delete=False, dir="flagged/file") as temp_file_container:
-            for text_piece in text_pieces:
-                print(text_piece)
-                translated_text = get_chat_gpt_completion(text_piece, config.GPT_TRANSLATE_PROMPT_EN, lang)
-                temp_file_container.write(translated_text)
-        return temp_file_container.name  # todo investigate mime types to return
-
-
-def translated_temp_file_output(temp_file_obj, lang: str = "English"):
-    if temp_file_obj:
-        with open(temp_file_obj.name, "r") as file_obj:
-            text = file_obj.read()
-            text_pieces = gpt_slice_text_into_pieces(text, config.CHARACTERS_AMOUNT)
-        return make_txt_translated_file_from_pieces(text_pieces, lang)
-
-
-def make_txt_translated_file(text, lang: str = "English"):
-    if text:
-        text_pieces = gpt_slice_text_into_pieces(text, config.CHARACTERS_AMOUNT)
-        return make_txt_translated_file_from_pieces(text_pieces, lang)
-
-
-def api_transcribe_to_txt_file(file_path):
-    date_stamp = datetime.now().strftime("%d.%m.%y-%H:%M:%S")
-    with open(file_path, "rb") as audio_file:
-        transcript = openai.Audio.transcribe("whisper-1", audio_file)
-        with open(f"/home/master/Загрузки/transcribed_text_seg_{date_stamp}.txt", "w") as fil_obj:
-            fil_obj.write(transcript["text"])
-        print("Success!")
-
-
-def convert_mp3_file_to_int_16():
+def calculate_segment_duration(mp3_filepath: str, segment_size_mb: int) -> tuple[AudioSegment, int]:
     # read MP3 file
-    audio_data = AudioSegment.from_file("input_audio.mp3", format="mp3")
+    audio = AudioSegment.from_file(mp3_filepath, format="mp3")
+    # calculate segment duration in milliseconds to achieve desired file size
+    segment_duration_ms = math.ceil(
+        (segment_size_mb * 1024 * 1024 * 8) / audio.frame_rate / audio.sample_width / audio.channels) * 1000
+    return audio, segment_duration_ms
+
+
+def split_audio_into_segments(audio: AudioSegment, segment_duration_ms: int) -> list:
+    segments = []
+    for i in range(0, len(audio), segment_duration_ms):
+        segment = audio[i: i + segment_duration_ms]
+        segments.append(segment)
+    print("split_audio_into_segments is done")
+    return segments
+
+
+def divide_mp3_into_segments(mp3_filepath: str, segment_size_mb: int):
+    audio, segment_duration_ms = calculate_segment_duration(mp3_filepath, segment_size_mb)
+    segments = split_audio_into_segments(audio, segment_duration_ms)
+    # export each segment to a new file
+    for segment in segments:
+        date_stamp = datetime.now().strftime("%d.%m.%y-%H:%M:%S.%f")
+        segment.export(f"{config.FILE_FOLDER}/segment_{date_stamp}.mp3", format="mp3")
+
+
+# for reducing file size
+def convert_mp3_file_to_int_16(input_filepath: str, output_filepath: str, file_format: str = "mp3"):
+    # read MP3 file
+    audio_data = AudioSegment.from_file(input_filepath, format=file_format)
     # get sample rate and channels
     sample_rate = audio_data.frame_rate
     channels = audio_data.channels
@@ -96,54 +103,37 @@ def convert_mp3_file_to_int_16():
         channels=channels
     )
     # write the processed audio data to an MP3 file
-    processed_audio_data.export("output_audio.mp3", format="mp3")
+    processed_audio_data.export(output_filepath, format=file_format)
 
 
-def divide_mp3_into_segments(mp3_filepath: str, segment_size_mb: int):
-    audio, segment_duration_ms = calculate_segment_duration(mp3_filepath, segment_size_mb)
-
-    segments = split_audio_into_segments(audio, segment_duration_ms)
-
-    # export each segment to a new file
-    for segment in segments:
-        date_stamp = datetime.now().strftime("%d.%m.%y-%H:%M:%S.%f")
-        segment.export(f"/home/master/Загрузки/segment_{date_stamp}.mp3", format="mp3")
-
-
-def split_audio_into_segments(audio: AudioSegment, segment_duration_ms: int) -> list:
-    segments = []
-    for i in range(0, len(audio), segment_duration_ms):
-        segment = audio[i: i + segment_duration_ms]
-        segments.append(segment)
-    print("split_audio_into_segments is done")
-    return segments
+def make_txt_translated_file_from_pieces(text_pieces: list, lang: str = "English") -> str:
+    if text_pieces:
+        with NamedTemporaryFile(
+                suffix=".txt", mode="a", delete=False, dir="flagged/file") as temp_file_container:
+            for text_piece in text_pieces:
+                print(text_piece)
+                translated_text = get_chat_gpt_completion(text_piece, config.GPT_TRANSLATE_PROMPT_EN, lang)
+                temp_file_container.write(translated_text)
+        return temp_file_container.name  # todo investigate mime types to return
 
 
-def calculate_segment_duration(mp3_filepath: str, segment_size_mb: int) -> tuple[AudioSegment, int]:
-    # read MP3 file
-    audio = AudioSegment.from_file(mp3_filepath, format="mp3")
-    # calculate segment duration in milliseconds to achieve desired file size
-    segment_duration_ms = math.ceil(
-        (segment_size_mb * 1024 * 1024 * 8) / audio.frame_rate / audio.sample_width / audio.channels) * 1000
-    return audio, segment_duration_ms
+def translated_temp_file_output(temp_file_obj, lang: str = "English"):
+    if temp_file_obj:
+        try:
+            with open(temp_file_obj.name, "r") as file_obj:
+                text = file_obj.read()
+        except UnicodeDecodeError as ex:  # if text not in UTF-8
+            with open(temp_file_obj.name, "rb") as file_obj:
+                text = file_obj.read().decode('Windows-1251')
+        finally:
+            text_pieces = gpt_slice_text_into_pieces(text, config.CHARACTERS_AMOUNT)
+        return make_txt_translated_file_from_pieces(text_pieces, lang)
 
 
-def make_txt_file(path_to_new_file, txt_content):
-    with open(path_to_new_file, "a") as file_obj:
-        file_obj.write(txt_content)
-
-
-def measure_time(func):
-    import time
-
-    def wrapper(*args, **kwargs):
-        start_time = time.time()
-        result = func(*args, **kwargs)
-        end_time = time.time()
-        print(f"Function {func.__name__} took {end_time - start_time:.6f} seconds to execute.")
-        return result
-
-    return wrapper
+def make_txt_translated_file(text, lang: str = "English"):
+    if text:
+        text_pieces = gpt_slice_text_into_pieces(text, config.CHARACTERS_AMOUNT)
+        return make_txt_translated_file_from_pieces(text_pieces, lang)
 
 
 @measure_time

@@ -14,6 +14,10 @@ openai.api_key = config.API_KEY
 logging.basicConfig(level=logging.CRITICAL)
 
 
+def launch_mode(func, mode: str):
+    return func(auth=config.USERS, auth_message="Enter login and password") if mode == "prod" else func()
+
+
 def translate_text(text, lang):
     return make_txt_translated_file(text, lang)
 
@@ -27,7 +31,7 @@ def transcribe_record(record):
 
 
 def transcribe_audiofile(audio_file):
-    return audio_transcribe_to_text(audio_file)  # todo add audio slicing
+    return audio_transcribe_to_text(audio_file)
 
 
 if __name__ == "__main__":
@@ -46,7 +50,9 @@ if __name__ == "__main__":
                     btn_transcribe_audiofile = gr.Button(value="Transcribe audio_file")
                 with gr.Column():
                     text_output_audio_file = gr.Textbox(
-                        label="Transcribed audio_file", placeholder="Тут будет транскрибация или введите текст")
+                        label="Transcribed audio_file",
+                        placeholder="Тут будет транскрибация или введите текст",
+                    )
                     lang_input_dropdown = gr.components.Dropdown(choices=config.LANGUAGES, label="Select language")
                     btn_translate = gr.Button(value="Translate text upper")
                     output_txt_file = gr.components.File(label="Download txt file")
@@ -69,7 +75,7 @@ if __name__ == "__main__":
             outputs=[text_output_record],
         )
         btn_transcribe_audiofile.click(
-            fn=transcribe_audiofile,  # todo add audio 25Mb slicing
+            fn=transcribe_audiofile,
             inputs=[audio_file_input],
             outputs=[text_output_audio_file],
         )
@@ -85,5 +91,4 @@ if __name__ == "__main__":
             api_name="translate_txt_file"
         )
 
-    # transcribe_interface.launch(auth=config.USERS, auth_message="Enter login and password")
-    transcribe_interface.launch()
+    launch_mode(transcribe_interface.launch, config.MODE)

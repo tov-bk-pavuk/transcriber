@@ -133,3 +133,6 @@ dmypy.json
 
 # Pycharm
 .idea
+
+# custome code files
+/third_patry_libs/bufer_code.py

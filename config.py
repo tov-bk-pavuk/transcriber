@@ -3,6 +3,8 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+MODE = ""  # "prod" is you need authorization turn on
+
 API_KEY = os.getenv("OPENAI_API_KEY", "")
 USERS = [
     (os.getenv("pm_username", ""), os.getenv("pm_password", "")),
@@ -49,6 +51,10 @@ LANGUAGES = ["English", "Ukrainian", "Russian"]
 
 # need to divide text into parts because of 4096 tokens restriction
 CHARACTERS_AMOUNT = 4000
+API_AUDIOFILE_SIZE_RESTRICTION_MB = 25
+BYTES_25: int = 25000000
+FILE_SIZE_RESTRICTION_BYTES = 50000000
+FILE_DIVIDER = 1000000  # to get Mb
 
 SOME_TEXT = "In the example above, the file argument is a Gradio gr.File()"
 " object passed to the process_file() function. Inside the function,"
