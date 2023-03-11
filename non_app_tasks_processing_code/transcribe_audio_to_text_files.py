@@ -70,8 +70,7 @@ def translate_txt_to_ua_en(txt_filenames_list: list):
             print(f"{ex=}")
             with open(f"{config.FILE_FOLDER}/{text_file_name}", "rb") as file_obj:
                 source_text = file_obj.read().decode('Windows-1251')
-        finally:
-            text_pieces: list = gpt_slice_text_into_pieces(source_text, config.CHARACTERS_AMOUNT)
+        text_pieces: list = gpt_slice_text_into_pieces(source_text, config.CHARACTERS_AMOUNT)
         with open(f"{config.FILE_FOLDER}/ua_{text_file_name}", "a") as file_obj_:
             for text in text_pieces:
                 res = get_chat_gpt_completion(text, config.GPT_TRANSLATE_PROMPT_UA, "Ukrainian")
