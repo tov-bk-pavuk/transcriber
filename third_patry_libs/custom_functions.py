@@ -13,7 +13,7 @@ from integrations.open_ai import (
     audio_transcribe,
     get_chat_gpt_completion,
 )
-from third_patry_libs.custom_exceptions import FileSizeException
+from third_patry_libs.custom_exceptions import SizeException
 from third_patry_libs.debug_tools import measure_time
 
 openai.api_key = config.API_KEY
@@ -24,7 +24,7 @@ def record_transcribe_to_text(audio):
         with open(audio, "rb") as audio_file:
             file_size = fstat(audio_file.fileno()).st_size
             if file_size > config.BYTES_25:
-                raise FileSizeException(f"Record size is {file_size / config.FILE_DIVIDER} Mb."
+                raise SizeException(f"Record size is {file_size / config.FILE_DIVIDER} Mb."
                                         f"Allowed record size is {config.BYTES_25 / config.FILE_DIVIDER} Mb!")
             transcript = audio_transcribe(audio_file)
             return transcript["text"]
@@ -37,7 +37,7 @@ def audio_transcribe_to_text(temp_file_obj):
         with open(file_path, "rb") as audio_file:
             file_size = fstat(audio_file.fileno()).st_size
             if file_size > config.FILE_SIZE_RESTRICTION_BYTES:
-                raise FileSizeException(f"Reduce audio file size to"
+                raise SizeException(f"Reduce audio file size to"
                                         f" {config.FILE_SIZE_RESTRICTION_BYTES / config.FILE_DIVIDER} Mb!")
             elif file_size > config.BYTES_25:
                 audio, segment_duration = calculate_segment_duration(
@@ -54,7 +54,8 @@ def audio_transcribe_to_text(temp_file_obj):
     return "No file"
 
 
-def calculate_segment_duration(mp3_filepath: str, segment_size_mb: int) -> tuple[AudioSegment, int]:
+def calculate_segment_duration(mp3_filepath: str, segment_size_mb: int):
+    #  -> tuple[AudioSegment, int] Huggingface has Python 3.8
     # read MP3 file
     audio = AudioSegment.from_file(mp3_filepath, format="mp3")
     # calculate segment duration in milliseconds to achieve desired file size
@@ -122,16 +123,19 @@ def translated_temp_file_output(temp_file_obj, lang: str = "English"):
         try:
             with open(temp_file_obj.name, "r") as file_obj:
                 text = file_obj.read()
+                check_text_restriction(text)
         except UnicodeDecodeError as ex:  # if text not in UTF-8
+            print(f"{ex=}")
             with open(temp_file_obj.name, "rb") as file_obj:
                 text = file_obj.read().decode('Windows-1251')
-        finally:
-            text_pieces = gpt_slice_text_into_pieces(text, config.CHARACTERS_AMOUNT)
+                check_text_restriction(text)
+        text_pieces = gpt_slice_text_into_pieces(text, config.CHARACTERS_AMOUNT)
         return make_txt_translated_file_from_pieces(text_pieces, lang)
 
 
 def make_txt_translated_file(text, lang: str = "English"):
     if text:
+        check_text_restriction(text)
         text_pieces = gpt_slice_text_into_pieces(text, config.CHARACTERS_AMOUNT)
         return make_txt_translated_file_from_pieces(text_pieces, lang)
 
@@ -177,6 +181,12 @@ def gpt_slice_text_into_pieces(text: str, segment_size: int) -> list:
         start_index = stop_index
         stop_index += segment_size
     return list_of_text_pieces
+
+
+def check_text_restriction(text):
+    text_length = len(text)
+    if text_length > config.MAX_CHARACTERS:
+        raise SizeException(f"Text has {text_length} characters when max {config.MAX_CHARACTERS} is allowed!")
 
 
 def get_file_lists(folder_path: str = config.FILE_FOLDER):

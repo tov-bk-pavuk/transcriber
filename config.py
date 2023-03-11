@@ -55,6 +55,7 @@ API_AUDIOFILE_SIZE_RESTRICTION_MB = 25
 BYTES_25: int = 25000000
 FILE_SIZE_RESTRICTION_BYTES = 50000000
 FILE_DIVIDER = 1000000  # to get Mb
+MAX_CHARACTERS = 25000  # text size restriction
 
 SOME_TEXT = "In the example above, the file argument is a Gradio gr.File()"
 " object passed to the process_file() function. Inside the function,"
