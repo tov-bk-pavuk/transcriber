@@ -53,6 +53,9 @@ if __name__ == "__main__":
                         label="Transcribed audio_file",
                         placeholder="Тут будет транскрибация или введите текст",
                     )
+                    output_transcribed_txt_file = gr.components.File(
+                        label="Download transcribed txt file",
+                    )
                     lang_input_dropdown = gr.components.Dropdown(choices=config.LANGUAGES, label="Select language")
                     btn_translate = gr.Button(value="Translate text upper")
                     output_txt_file = gr.components.File(label="Download txt file")
@@ -77,7 +80,7 @@ if __name__ == "__main__":
         btn_transcribe_audiofile.click(
             fn=transcribe_audiofile,
             inputs=[audio_file_input],
-            outputs=[text_output_audio_file],
+            outputs=[text_output_audio_file, output_transcribed_txt_file],
         )
         btn_translate.click(
             fn=translate_text,

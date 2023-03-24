@@ -45,13 +45,19 @@ def audio_transcribe_to_text(temp_file_obj):
                 segments = split_audio_into_segments(audio, segment_duration)
                 transcribed_text = ""
                 for segment in segments:
-                    transcript = audio_transcribe(segment)
-                    transcribed_text.join(transcript["text"])
-                return transcribed_text
+                    with NamedTemporaryFile(suffix=".mp3", mode="wb") as temp_file_container:
+                        file_name = temp_file_container.name
+                        segment.export(file_name, format="mp3")
+                        with open(file_name, "rb") as fil_obj:
+                            transcript = audio_transcribe(fil_obj)
+                            transcribed_text += transcript["text"]
+                transcribed_text_file_name = make_txt_transcribed_file(transcribed_text)
+                return transcribed_text, transcribed_text_file_name
             else:
                 transcript = audio_transcribe(audio_file)
-                return transcript["text"]
-    return "No file"
+                transcribed_text_file_name = make_txt_transcribed_file(transcript["text"])
+                return transcript["text"], transcribed_text_file_name
+    return "No file", None
 
 
 def calculate_segment_duration(mp3_filepath: str, segment_size_mb: int):
@@ -116,6 +122,13 @@ def make_txt_translated_file_from_pieces(text_pieces: list, lang: str = "English
                 translated_text = get_chat_gpt_completion(text_piece, config.GPT_TRANSLATE_PROMPT_EN, lang)
                 temp_file_container.write(translated_text)
         return temp_file_container.name  # todo investigate mime types to return
+
+
+def make_txt_transcribed_file(text: str) -> str:
+    with NamedTemporaryFile(
+            suffix=".txt", mode="a", delete=False, dir="flagged/file") as temp_file_container:
+        temp_file_container.write(text)
+    return temp_file_container.name
 
 
 def translated_temp_file_output(temp_file_obj, lang: str = "English"):
