@@ -5,6 +5,7 @@ import openai
 from third_patry_libs.custom_functions import (
     audio_transcribe_to_text,
     make_txt_translated_file,
+    text_file_to_speach,
     translated_temp_file_output,
     record_transcribe_to_text,
 )
@@ -34,7 +35,11 @@ def transcribe_audiofile(audio_file):
     return audio_transcribe_to_text(audio_file)
 
 
-if __name__ == "__main__":
+def text_to_speach(txt_file, lang):
+    return text_file_to_speach(txt_file, lang)
+
+
+def main():
     with gr.Blocks(css="style.css", analytics_enabled=True) as transcribe_interface:
         with gr.Tab("Record and transcribe"):
             with gr.Row():
@@ -53,6 +58,9 @@ if __name__ == "__main__":
                         label="Transcribed audio_file",
                         placeholder="Тут будет транскрибация или введите текст",
                     )
+                    output_transcribed_txt_file = gr.components.File(
+                        label="Download transcribed txt file",
+                    )
                     lang_input_dropdown = gr.components.Dropdown(choices=config.LANGUAGES, label="Select language")
                     btn_translate = gr.Button(value="Translate text upper")
                     output_txt_file = gr.components.File(label="Download txt file")
@@ -69,6 +77,17 @@ if __name__ == "__main__":
                         # type="binary",
                         # file_types=["application/octet-stream"],
                     )
+        with gr.Tab("Text to speach"):
+            with gr.Row():
+                with gr.Column():
+                    txt_file_input_to_speach = gr.File(label="Upload text_file")
+                    voices_input_dropdown = gr.components.Dropdown(
+                        choices=config.LANGUAGES, label="Select language")
+                    btn_text_file_to_speach = gr.Button(value="To speach!")
+                with gr.Column():
+                    output_speach_audio_file = gr.components.File(
+                        label="Download speach audio file",
+                    )
         btn_transcribe_record.click(
             fn=transcribe_record,
             inputs=[audio_input],
@@ -77,7 +96,7 @@ if __name__ == "__main__":
         btn_transcribe_audiofile.click(
             fn=transcribe_audiofile,
             inputs=[audio_file_input],
-            outputs=[text_output_audio_file],
+            outputs=[text_output_audio_file, output_transcribed_txt_file],
         )
         btn_translate.click(
             fn=translate_text,
@@ -90,5 +109,15 @@ if __name__ == "__main__":
             outputs=[output_translated_txt_file],
             api_name="translate_txt_file"
         )
+        btn_text_file_to_speach.click(
+            fn=text_to_speach,
+            inputs=[txt_file_input_to_speach, voices_input_dropdown],
+            outputs=[output_speach_audio_file],
+            api_name="text_to_speach"
+        )
 
     launch_mode(transcribe_interface.launch, config.MODE)
+
+
+if __name__ == "__main__":
+    main()

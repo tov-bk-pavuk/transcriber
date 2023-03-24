@@ -46,6 +46,7 @@ GPT_TRANSLATE_PROMPT_EN = [
 SLEEP_SECS = 3
 
 FILE_FOLDER = "/home/master/Загрузки/transcribe_and_translate"
+FILE_FOLDER_TTS = "/home/master/Загрузки/transcribe_and_translate/tts"
 
 LANGUAGES = ["English", "Ukrainian", "Russian"]
 
@@ -62,3 +63,19 @@ SOME_TEXT = "In the example above, the file argument is a Gradio gr.File()"
 " we access the temporary filepath of the uploaded file by calling file.file.name."
 " This returns a string containing the path to the temporary file,"
 " which can then be used for further processing."
+
+# AZURE
+
+AZ_KEY_1 = os.getenv("AZURE_KEY_1", "")
+AZ_KEY_2 = os.getenv("AZURE_KEY_2", "")
+AZ_SUBSCR_KEY = os.getenv("AZ_SUBSCR_KEY", "")
+AZ_REGION = os.getenv("AZURE_REGION", "")
+AZ_ENDPOINT = os.getenv("TTS_ENDPOINT", "")
+AZ_ENDPOINT_BARE = os.getenv("TTS_ENDPOINT_BARE", "")
+
+# AZURE voices
+VOICES = {
+    "English": "en-US-AriaNeural",
+    "Ukrainian": "uk-UA-PolinaNeural",
+    "Russian": "ru-RU-DmitryNeural",
+}

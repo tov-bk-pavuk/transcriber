@@ -2,6 +2,7 @@ from collections import namedtuple
 from datetime import datetime
 import math
 from os import listdir, fstat
+import typing
 from tempfile import NamedTemporaryFile
 
 import numpy as np
@@ -12,6 +13,10 @@ import config
 from integrations.open_ai import (
     audio_transcribe,
     get_chat_gpt_completion,
+)
+from integrations.azure_in import (
+    GetAudio,
+    get_text_from_file,
 )
 from third_patry_libs.custom_exceptions import SizeException
 from third_patry_libs.debug_tools import measure_time
@@ -25,7 +30,7 @@ def record_transcribe_to_text(audio):
             file_size = fstat(audio_file.fileno()).st_size
             if file_size > config.BYTES_25:
                 raise SizeException(f"Record size is {file_size / config.FILE_DIVIDER} Mb."
-                                        f"Allowed record size is {config.BYTES_25 / config.FILE_DIVIDER} Mb!")
+                                    f"Allowed record size is {config.BYTES_25 / config.FILE_DIVIDER} Mb!")
             transcript = audio_transcribe(audio_file)
             return transcript["text"]
     return "No audio"
@@ -38,20 +43,37 @@ def audio_transcribe_to_text(temp_file_obj):
             file_size = fstat(audio_file.fileno()).st_size
             if file_size > config.FILE_SIZE_RESTRICTION_BYTES:
                 raise SizeException(f"Reduce audio file size to"
-                                        f" {config.FILE_SIZE_RESTRICTION_BYTES / config.FILE_DIVIDER} Mb!")
+                                    f" {config.FILE_SIZE_RESTRICTION_BYTES / config.FILE_DIVIDER} Mb!")
             elif file_size > config.BYTES_25:
                 audio, segment_duration = calculate_segment_duration(
                     file_path, config.API_AUDIOFILE_SIZE_RESTRICTION_MB)
                 segments = split_audio_into_segments(audio, segment_duration)
                 transcribed_text = ""
                 for segment in segments:
-                    transcript = audio_transcribe(segment)
-                    transcribed_text.join(transcript["text"])
-                return transcribed_text
+                    with NamedTemporaryFile(suffix=".mp3", mode="wb") as temp_file_container:
+                        file_name = temp_file_container.name
+                        segment.export(file_name, format="mp3")
+                        with open(file_name, "rb") as fil_obj:
+                            transcript = audio_transcribe(fil_obj)
+                            transcribed_text += transcript["text"]
+                transcribed_text_file_name = make_txt_transcribed_file(transcribed_text)
+                return transcribed_text, transcribed_text_file_name
             else:
                 transcript = audio_transcribe(audio_file)
-                return transcript["text"]
-    return "No file"
+                transcribed_text_file_name = make_txt_transcribed_file(transcript["text"])
+                return transcript["text"], transcribed_text_file_name
+    return "No file", None
+
+
+def text_file_to_speach(temp_file_obj: typing.BinaryIO, lang: str):
+    if temp_file_obj:  # todo restrict file size
+        text = get_text_from_file(temp_file_obj.name)
+        with NamedTemporaryFile(
+                suffix=".wav", mode="wb", delete=False, dir="flagged/file") as temp_file_container:
+            audio = GetAudio(config.VOICES.get(lang))
+            audio.set_filename(temp_file_container.name)
+            audio.speech_synthesizer.speak_text_async(text).get()
+        return temp_file_container.name
 
 
 def calculate_segment_duration(mp3_filepath: str, segment_size_mb: int):
@@ -116,6 +138,13 @@ def make_txt_translated_file_from_pieces(text_pieces: list, lang: str = "English
                 translated_text = get_chat_gpt_completion(text_piece, config.GPT_TRANSLATE_PROMPT_EN, lang)
                 temp_file_container.write(translated_text)
         return temp_file_container.name  # todo investigate mime types to return
+
+
+def make_txt_transcribed_file(text: str) -> str:
+    with NamedTemporaryFile(
+            suffix=".txt", mode="a", delete=False, dir="flagged/file") as temp_file_container:
+        temp_file_container.write(text)
+    return temp_file_container.name
 
 
 def translated_temp_file_output(temp_file_obj, lang: str = "English"):
