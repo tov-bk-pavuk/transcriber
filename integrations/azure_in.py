@@ -18,7 +18,7 @@ class GetAudio:
         self.audio_config = None
         self.speech_synthesizer = None
 
-    def set_filename(self, audio_folder_path, filename):
+    def set_filename(self, filename, audio_folder_path=""):
         self.audio_config = AudioOutputConfig(filename=f"{audio_folder_path}/{filename}")
         self.speech_synthesizer = SpeechSynthesizer(speech_config=self.speech_config, audio_config=self.audio_config)
 
@@ -30,17 +30,4 @@ class GetAudio:
 
 def get_text_from_file(filepath):
     with open(filepath, "r") as f_obj:
-        return f_obj.read(), f_obj.name
-
-
-def run():
-    text, file_name = get_text_from_file(f"{config.FILE_FOLDER}/test_txt_to_voice_ru.txt")
-    print(text)
-    audio = GetAudio(config.VOICES.get("ru"))
-    audio.set_filename(config.FILE_FOLDER_TTS, "test_02.wav")
-    audio.speech_synthesizer.speak_text_async(text).get()
-    # os.system(f'mpv --start=0  "{file_path}"')
-
-
-if __name__ == "__main__":
-    run()
+        return f_obj.read()

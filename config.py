@@ -75,7 +75,7 @@ AZ_ENDPOINT_BARE = os.getenv("TTS_ENDPOINT_BARE", "")
 
 # AZURE voices
 VOICES = {
-    "en": "en-US-AriaNeural",
-    "ua": "uk-UA-PolinaNeural",
-    "ru": "ru-RU-DmitryNeural",
+    "English": "en-US-AriaNeural",
+    "Ukrainian": "uk-UA-PolinaNeural",
+    "Russian": "ru-RU-DmitryNeural",
 }

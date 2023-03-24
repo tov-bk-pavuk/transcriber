@@ -2,6 +2,7 @@ from collections import namedtuple
 from datetime import datetime
 import math
 from os import listdir, fstat
+import typing
 from tempfile import NamedTemporaryFile
 
 import numpy as np
@@ -12,6 +13,10 @@ import config
 from integrations.open_ai import (
     audio_transcribe,
     get_chat_gpt_completion,
+)
+from integrations.azure_in import (
+    GetAudio,
+    get_text_from_file,
 )
 from third_patry_libs.custom_exceptions import SizeException
 from third_patry_libs.debug_tools import measure_time
@@ -25,7 +30,7 @@ def record_transcribe_to_text(audio):
             file_size = fstat(audio_file.fileno()).st_size
             if file_size > config.BYTES_25:
                 raise SizeException(f"Record size is {file_size / config.FILE_DIVIDER} Mb."
-                                        f"Allowed record size is {config.BYTES_25 / config.FILE_DIVIDER} Mb!")
+                                    f"Allowed record size is {config.BYTES_25 / config.FILE_DIVIDER} Mb!")
             transcript = audio_transcribe(audio_file)
             return transcript["text"]
     return "No audio"
@@ -38,7 +43,7 @@ def audio_transcribe_to_text(temp_file_obj):
             file_size = fstat(audio_file.fileno()).st_size
             if file_size > config.FILE_SIZE_RESTRICTION_BYTES:
                 raise SizeException(f"Reduce audio file size to"
-                                        f" {config.FILE_SIZE_RESTRICTION_BYTES / config.FILE_DIVIDER} Mb!")
+                                    f" {config.FILE_SIZE_RESTRICTION_BYTES / config.FILE_DIVIDER} Mb!")
             elif file_size > config.BYTES_25:
                 audio, segment_duration = calculate_segment_duration(
                     file_path, config.API_AUDIOFILE_SIZE_RESTRICTION_MB)
@@ -58,6 +63,17 @@ def audio_transcribe_to_text(temp_file_obj):
                 transcribed_text_file_name = make_txt_transcribed_file(transcript["text"])
                 return transcript["text"], transcribed_text_file_name
     return "No file", None
+
+
+def text_file_to_speach(temp_file_obj: typing.BinaryIO, lang: str):
+    if temp_file_obj:  # todo restrict file size
+        text = get_text_from_file(temp_file_obj.name)
+        with NamedTemporaryFile(
+                suffix=".wav", mode="wb", delete=False, dir="flagged/file") as temp_file_container:
+            audio = GetAudio(config.VOICES.get(lang))
+            audio.set_filename(temp_file_container.name)
+            audio.speech_synthesizer.speak_text_async(text).get()
+        return temp_file_container.name
 
 
 def calculate_segment_duration(mp3_filepath: str, segment_size_mb: int):
